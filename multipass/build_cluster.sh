@@ -87,7 +87,7 @@ function install_vm() {
 }
 
 function restart_vm() {
-    for ((i = start_index; i <= node_count; i++));
+    for ((i = start_index; i < node_count; i++));
     do
         local vm_name="kvm$i"
         if [ ${#i} -eq 1 ]; then
