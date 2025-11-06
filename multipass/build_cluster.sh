@@ -64,7 +64,7 @@ function launch_cluster() {
         fi
 
         echo "Launch Kubernetes VM instance ${instance}..."
-        multipass launch jammy --name $instance -c 1 -m 2G -d 10G
+        multipass launch jammy --name $instance -c 2 -m 4G -d 20G
 
         echo "Copy id_rsa.pub to ${instance}..."
         multipass transfer ./1.tmp $instance:/tmp/id_rsa.pub
