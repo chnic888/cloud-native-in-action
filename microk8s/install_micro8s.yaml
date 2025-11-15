@@ -30,17 +30,30 @@
         group: ubuntu
         mode: '0700'
         recurse: yes
-    # - name: Wait until microk8s is ready (run only on vm00)
-    #   become: yes
-    #   ansible.builtin.command: /snap/bin/microk8s status --wait-ready
-    #   register: microk8s_status
-    #   retries: 12
-    #   delay: 10
-    #   until: microk8s_status.rc == 0
-    #   when: inventory_hostname == "kvm00"
-    # - name: Enable microk8s addons (dns, dashboard, registry) on vm00
-    #   become: yes
-    #   ansible.builtin.command: /snap/bin/microk8s enable dns dashboard registry
-    #   register: microk8s_enable
-    #   changed_when: microk8s_enable.rc == 0
-    #   when: inventory_hostname == "kvm00" and false
+    - name: Wait until microk8s is ready
+      become: yes
+      ansible.builtin.command: /snap/bin/microk8s status --wait-ready
+      register: microk8s_status
+      retries: 12
+      delay: 10
+      until: microk8s_status.rc == 0
+    - name: Enable microk8s addons (dns, dashboard, registry) on vm00
+      become: yes
+      ansible.builtin.command: /snap/bin/microk8s enable dns dashboard registry
+      register: microk8s_enable
+      changed_when: microk8s_enable.rc == 0
+      when: inventory_hostname == "kvm00"
+    - name: Add node to cluster on kvm00
+      become: yes
+      ansible.builtin.command: /snap/bin/microk8s add-node
+      register: add_node_output
+      when: inventory_hostname == "kvm00"
+    - name: Extract join command from add-node output
+      become: yes
+      ansible.builtin.set_fact:
+        microk8s_join_command: "{{ add_node_output.stdout | regex_search('microk8s join [^\\s]+') }}"
+      when: inventory_hostname == "kvm00"
+    - name: Display join command
+      ansible.builtin.debug:
+        msg: "{{ hostvars['kvm00']['microk8s_join_command'] }}"
+      when: inventory_hostname == "kvm00"
