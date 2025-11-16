@@ -57,3 +57,15 @@
       ansible.builtin.debug:
         msg: "{{ hostvars['kvm00']['microk8s_join_command'] }}"
       when: inventory_hostname == "kvm00"
+    - name: Join other nodes to the cluster
+      become: yes
+      ansible.builtin.shell: "{{ hostvars['kvm00']['microk8s_join_command'] }} --worker"
+      register: microk8s_join_result
+      changed_when: microk8s_join_result.rc == 0
+      when: 
+        - inventory_hostname != "kvm00"
+        - hostvars['kvm00']['microk8s_join_command'] is defined
+    - name: Show join result for workers nodes
+      ansible.builtin.debug:
+        var: microk8s_join_result
+      when: inventory_hostname != "kvm00"
