@@ -3,6 +3,7 @@
   hosts: kvms
   become: yes
   remote_user: ubuntu
+  any_errors_fatal: true
   tasks:
     - name: Install microk8s dependencies (snapd)
       apt:
@@ -41,31 +42,21 @@
       become: yes
       ansible.builtin.command: /snap/bin/microk8s enable dns dashboard registry
       register: microk8s_enable
-      changed_when: microk8s_enable.rc == 0
+      changed_when: "'Enabling' in microk8s_enable.stdout"
       when: inventory_hostname == "kvm00"
-    - name: Add node to cluster on kvm00
+    - name: Request join command for this worker
       become: yes
-      ansible.builtin.command: /snap/bin/microk8s add-node
-      register: add_node_output
-      when: inventory_hostname == "kvm00"
-    - name: Extract join command from add-node output
-      become: yes
-      ansible.builtin.set_fact:
-        microk8s_join_command: "{{ add_node_output.stdout | regex_search('microk8s join [^\\s]+') }}"
-      when: inventory_hostname == "kvm00"
-    - name: Display join command
+      ansible.builtin.command: /snap/bin/microk8s add-node --format short
+      register: microk8s_join_command
+      delegate_to: kvm00
+      when: inventory_hostname != "kvm00"
+    - name: Display join command for worker
       ansible.builtin.debug:
-        msg: "{{ hostvars['kvm00']['microk8s_join_command'] }}"
-      when: inventory_hostname == "kvm00"
-    - name: Join other nodes to the cluster
+        msg: "{{ microk8s_join_command.stdout }}"
+      when: inventory_hostname != "kvm00"
+    - name: Join worker node to the cluster
       become: yes
-      ansible.builtin.shell: "{{ hostvars['kvm00']['microk8s_join_command'] }} --worker"
+      ansible.builtin.shell: "{{ microk8s_join_command.stdout }} --worker"
       register: microk8s_join_result
       changed_when: microk8s_join_result.rc == 0
-      when: 
-        - inventory_hostname != "kvm00"
-        - hostvars['kvm00']['microk8s_join_command'] is defined
-    - name: Show join result for workers nodes
-      ansible.builtin.debug:
-        var: microk8s_join_result
       when: inventory_hostname != "kvm00"
