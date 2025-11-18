@@ -11,6 +11,11 @@
           - snapd
         state: present
         update_cache: yes
+    - name: Install helm via snap
+      become: yes
+      ansible.builtin.command: snap install helm --classic
+      args:
+        creates: /snap/bin/helm
     - name: Install microk8s via snap
       become: yes
       ansible.builtin.command: snap install microk8s --classic
